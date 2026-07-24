@@ -1,0 +1,30 @@
+{
+    "name": "example_site",
+    "type": "web",
+    "url": "https://example.com",
+    "authentication": {
+        "required": false,
+        "method": "basic",
+        "credentials_env": "EXAMPLE_CREDENTIALS"
+    },
+    "selectors": {
+        "items": ".item-class",
+        "title": "h1.title",
+        "description": "p.description",
+        "price": "span.price"
+    },
+    "pagination": {
+        "enabled": true,
+        "next_button": "a.next-page",
+        "max_pages": 10
+    },
+    "anti_bot": {
+        "use_proxy": true,
+        "rotate_user_agent": true,
+        "delay_between_requests": 2
+    },
+    "resource_limits": {
+        "max_memory_mb": 512,
+        "timeout_seconds": 30
+    }
+}

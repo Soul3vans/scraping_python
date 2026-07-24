@@ -1,0 +1,531 @@
+{
+  "proyecto": {
+    "nombre": "Scraping Python",
+    "version": "0.1.0",
+    "descripcion": "Sistema modular de scraping con motor de extraccion web/API, gestion de tareas con RQ, interfaz Django, defensas anti-bot y contenedor Podman. Optimizado para hardware limitado (i5-3240, 8GB RAM, 2MB internet).",
+    "fecha_creacion": "2026-07-24",
+    "estado_actual": "inicializacion",
+    "raiz": "~/Escritorio/Scraping_python"
+  },
+
+  "stack_tecnologico": {
+    "lenguaje": "Python 3.11+",
+    "backend_scraping": {
+      "motores": ["Selenium", "Playwright"],
+      "parser": "BeautifulSoup4",
+      "peticiones_http": "Requests",
+      "validacion_datos": "Pydantic",
+      "user_agent_rotacion": "fake-useragent"
+    },
+    "framework_web": "Django 5.0.1",
+    "base_datos": {
+      "principal": "PostgreSQL 15",
+      "configurable_via_env": true,
+      "nota": "El motor de BD se configura en .env para permitir cambiar entre PostgreSQL, MySQL, SQLite, etc."
+    },
+    "cola_tareas": {
+      "broker": "Redis 7-alpine",
+      "worker": "RQ (Redis Queue)",
+      "integracion_django": "django-rq"
+    },
+    "contenedor": "Podman",
+    "calidad_codigo": {
+      "linter_formatter": "Ruff",
+      "pre_commit_hooks": [
+        "ruff (lint + format)",
+        "trailing-whitespace",
+        "end-of-file-fixer",
+        "check-yaml",
+        "check-added-large-files",
+        "check-merge-conflict",
+        "detect-private-key"
+      ]
+    },
+    "testing": ["pytest", "pytest-django"],
+    "seguridad": {
+      "encriptacion": "cryptography (Fernet)",
+      "variables_entorno": "python-decouple",
+      "proteccion_anti_bot": "Modulo propio (anti_bot.py)",
+      "rotacion_proxies": "Modulo propio (proxy_rotator.py)"
+    }
+  },
+
+  "hardware_objetivo": {
+    "cpu": "Intel i5-3240",
+    "ram": "8GB",
+    "internet": "2MB",
+    "limites_configurables": {
+      "max_cpu_cores": "Se define en .env (MAX_CPU_CORES), default 2",
+      "max_ram_mb": "Se define en .env (MAX_RAM_MB), default 2048"
+    }
+  },
+
+  "estructura_directorios": {
+    "~/Escritorio/Scraping_python/": {
+      "descripcion": "Raiz del proyecto",
+      "archivos": [
+        {
+          "nombre": ".env",
+          "tipo": "configuracion",
+          "proposito": "Variables de entorno: credenciales BD, Redis, SECRET_KEY, claves de encriptacion, limites de recursos, proxies. NUNCA se sube a git."
+        },
+        {
+          "nombre": ".gitignore",
+          "tipo": "configuracion",
+          "proposito": "Ignorar venv, .env, __pycache__, logs, data, staticfiles, archivos PDF descargados."
+        },
+        {
+          "nombre": "Dockerfile",
+          "tipo": "contenedor",
+          "proposito": "Imagen Podman basada en python:3.11-slim con PostgreSQL client, Redis, Playwright+Chromium."
+        },
+        {
+          "nombre": "docker-compose.yml",
+          "tipo": "contenedor",
+          "proposito": "Orquestacion de 4 servicios: db (PostgreSQL), redis, web (Django), worker (RQ). Volumenes persistentes para postgres_data y redis_data."
+        },
+        {
+          "nombre": ".pre-commit-config.yaml",
+          "tipo": "calidad",
+          "proposito": "Hooks de pre-commit con Ruff y validaciones de seguridad (detect-private-key, etc.)."
+        },
+        {
+          "nombre": "README.md",
+          "tipo": "documentacion",
+          "proposito": "Guia de instalacion, uso y estructura del proyecto."
+        },
+        {
+          "nombre": "mapa_inicial.json",
+          "tipo": "documentacion",
+          "proposito": "Mapa de contexto completo del proyecto para LLM."
+        }
+      ],
+      "subdirectorios": {
+        "logs/": "Almacenamiento de logs de ejecucion de scrapers y sistema.",
+        "data/downloads/": "Archivos descargados por el usuario (PDFs).",
+        "data/cache/": "Cache temporal para scraping."
+      }
+    },
+
+    "backend/": {
+      "descripcion": "Contiene todo el codigo Python: motor de scraping y aplicacion Django.",
+      "archivos": [
+        {
+          "nombre": "manage.py",
+          "tipo": "django",
+          "proposito": "Entry point de Django."
+        },
+        {
+          "nombre": "requirements.txt",
+          "tipo": "dependencias",
+          "proposito": "Dependencias Python congeladas con pip freeze."
+        }
+      ],
+      "subdirectorios": {
+        "core/": {
+          "descripcion": "Configuracion principal del proyecto Django (startproject core .).",
+          "archivos": [
+            {
+              "nombre": "__init__.py",
+              "proposito": "Paquete Python."
+            },
+            {
+              "nombre": "settings.py",
+              "proposito": "Configuracion Django: BD desde .env, RQ queues, middleware de seguridad, limites de recursos, headers seguros (HSTS, X-Frame-Options, XSS, CSRF, clickjacking).",
+              "configuraciones_clave": [
+                "SECRET_KEY desde .env",
+                "DEBUG desde .env",
+                "ALLOWED_HOSTS desde .env",
+                "DATABASES: engine, name, user, password, host, port desde .env",
+                "RQ_QUEUES: URL desde .env REDIS_URL, timeout 3600s",
+                "AUTH_PASSWORD_VALIDATORS: min_length 12",
+                "SECURE_BROWSER_XSS_FILTER: True",
+                "SECURE_CONTENT_TYPE_NOSNIFF: True",
+                "X_FRAME_OPTIONS: DENY",
+                "CSRF_COOKIE_SECURE: not DEBUG",
+                "SESSION_COOKIE_SECURE: not DEBUG",
+                "SECURE_HSTS_SECONDS: 31536000 (prod)",
+                "SECURE_HSTS_INCLUDE_SUBDOMAINS: True",
+                "SECURE_HSTS_PRELOAD: True",
+                "MAX_CPU_CORES desde .env (default 2)",
+                "MAX_RAM_MB desde .env (default 2048)"
+              ]
+            },
+            {
+              "nombre": "urls.py",
+              "proposito": "Enrutamiento principal. Incluir admin/, scrapers/, django_rq/."
+            },
+            {
+              "nombre": "wsgi.py",
+              "proposito": "WSGI entry point."
+            },
+            {
+              "nombre": "asgi.py",
+              "proposito": "ASGI entry point (reservado para futuro WebSocket)."
+            }
+          ]
+        },
+
+        "scraping_core/": {
+          "descripcion": "Motor de scraping independiente de Django. Modular, reutilizable, con clase base abstracta.",
+          "archivos": [
+            {
+              "nombre": "__init__.py",
+              "proposito": "Paquete Python. Exporta BaseScraper, WebScraper, APIScraper."
+            },
+            {
+              "nombre": "base_scraper.py",
+              "proposito": "Clase abstracta BaseScraper (ABC). Metodos abstractos: authenticate(), scrape(), validate_data(). Metodo concreto: cleanup(). Atributos: config_path, logger, session.",
+              "dependencias": ["abc", "typing", "logging"]
+            },
+            {
+              "nombre": "web_scraper.py",
+              "proposito": "Clase WebScraper(BaseScraper). Carga config JSON. Implementa authenticate(), scrape(), validate_data(). Soporta Selenium y Playwright.",
+              "dependencias": ["base_scraper", "json"]
+            },
+            {
+              "nombre": "api_scraper.py",
+              "proposito": "Clase APIScraper(BaseScraper). Carga config JSON. Para scraping de APIs REST. Reservado para implementacion futura.",
+              "dependencias": ["base_scraper", "json"]
+            },
+            {
+              "nombre": "anti_bot.py",
+              "proposito": "Clase AntiBotSystem. Metodos: get_random_headers() (User-Agent rotativo + headers realistas), apply_delay(min, max) (delay aleatorio entre requests), get_random_proxy(proxy_list).",
+              "dependencias": ["fake_useragent", "random", "time"]
+            },
+            {
+              "nombre": "proxy_rotator.py",
+              "proposito": "Clase ProxyRotator. Metodos: get_next_proxy() (seleccion aleatoria excluyendo fallidos), mark_proxy_failed(), test_proxy(). Resetea lista de fallidos si todos fallan.",
+              "dependencias": ["random", "typing", "requests"]
+            }
+          ],
+          "subdirectorios": {
+            "configs/": {
+              "descripcion": "Archivos JSON de configuracion por sitio. Cada sitio tiene su propio archivo.",
+              "archivos": [
+                {
+                  "nombre": "example_site.json",
+                  "proposito": "Plantilla de ejemplo con estructura: name, type (web/api), url, authentication (required, method, credentials_env), selectors (CSS selectors por campo), pagination (enabled, next_button, max_pages), anti_bot (use_proxy, rotate_user_agent, delay), resource_limits (max_memory_mb, timeout_seconds).",
+                  "es_plantilla": true
+                }
+              ]
+            },
+            "tests/": {
+              "descripcion": "Tests unitarios del motor de scraping."
+            }
+          }
+        },
+
+        "django_app/": {
+          "descripcion": "Aplicaciones Django, templates, static files y utilidades.",
+          "subdirectorios": {
+            "scrapers/": {
+              "descripcion": "App Django principal para gestion de scrapers.",
+              "archivos": [
+                {
+                  "nombre": "__init__.py",
+                  "proposito": "Paquete Python."
+                },
+                {
+                  "nombre": "admin.py",
+                  "proposito": "Registro de modelos en Django Admin."
+                },
+                {
+                  "nombre": "apps.py",
+                  "proposito": "Configuracion de la app ScrapersConfig."
+                },
+                {
+                  "nombre": "models.py",
+                  "proposito": "Modelos Django. Pendiente de definir. Se esperan: ScraperConfig, ScraperExecution, ScrapedData, TaskLog.",
+                  "estado": "pendiente"
+                },
+                {
+                  "nombre": "views.py",
+                  "proposito": "Vistas Django: dashboard, iniciar/programar scraper, ver resultados, descargar PDF. Solo superuser.",
+                  "estado": "pendiente"
+                },
+                {
+                  "nombre": "urls.py",
+                  "proposito": "Rutas de la app scrapers.",
+                  "estado": "pendiente"
+                },
+                {
+                  "nombre": "forms.py",
+                  "proposito": "Formularios para configuracion de scrapers y programacion.",
+                  "estado": "pendiente"
+                }
+              ],
+              "subdirectorios": {
+                "migrations/": "Migraciones de base de datos.",
+                "tests/": "Tests de la app Django."
+              }
+            },
+            "tasks/": {
+              "descripcion": "Tareas RQ para ejecucion asincrona de scrapers.",
+              "archivos": [
+                {
+                  "nombre": "__init__.py",
+                  "proposito": "Paquete Python."
+                },
+                {
+                  "nombre": "scraper_tasks.py",
+                  "proposito": "Funciones de tarea RQ: run_scraper(config_name), schedule_scraper(config_name, cron_expression). Aplican limites de recursos antes de ejecutar.",
+                  "estado": "pendiente"
+                }
+              ]
+            },
+            "utils/": {
+              "descripcion": "Utilidades transversales: seguridad, recursos, validacion.",
+              "archivos": [
+                {
+                  "nombre": "__init__.py",
+                  "proposito": "Paquete Python."
+                },
+                {
+                  "nombre": "security.py",
+                  "proposito": "Clase SecurityManager. Metodos: encrypt(data), decrypt(encrypted_data) usando Fernet con ENCRYPTION_KEY de settings. validate_password(password): min 12 chars, upper, lower, digit.",
+                  "dependencias": ["cryptography.fernet", "django.conf.settings"]
+                },
+                {
+                  "nombre": "resource_manager.py",
+                  "proposito": "Clase ResourceManager. Metodos estaticos: set_limits() (RLIMIT_AS para RAM, sched_setaffinity para CPU cores), get_usage() (ru_utime, ru_stime, ru_maxrss).",
+                  "dependencias": ["os", "resource", "django.conf.settings"]
+                },
+                {
+                  "nombre": "validators.py",
+                  "proposito": "Clase ScrapedDataValidator. Metodos estaticos: validate_basic_data(data) (verifica campos url y timestamp), validate_with_schema(data, PydanticModel), sanitize_data(data) (strip strings).",
+                  "dependencias": ["pydantic", "typing"]
+                }
+              ]
+            },
+            "templates/": {
+              "descripcion": "Templates HTML de Django.",
+              "subdirectorios": {
+                "scrapers/": "Templates especificos de la app scrapers: dashboard, detalle de scraper, formulario de configuracion, resultados."
+              }
+            },
+            "static/": {
+              "descripcion": "Archivos estaticos (CSS, JS, imagenes).",
+              "subdirectorios": {
+                "scrapers/": "Estaticos especificos de la app scrapers."
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "modulos": [
+    {
+      "id": "scraping_core",
+      "nombre": "Motor de Scraping",
+      "responsabilidad": "Ejecucion independiente de scraping web y API. No depende de Django para funcionar.",
+      "clases": ["BaseScraper (ABC)", "WebScraper", "APIScraper", "AntiBotSystem", "ProxyRotator"],
+      "flujo": "Config JSON -> WebScraper/APIScraper -> AntiBotSystem (headers + delay) -> ProxyRotator (proxy) -> Extraccion -> Validacion -> Retorno datos",
+      "dependencias_externas": ["selenium", "playwright", "beautifulsoup4", "requests", "fake-useragent"]
+    },
+    {
+      "id": "django_scrapers",
+      "nombre": "App Django Scrapers",
+      "responsabilidad": "Interfaz web para gestionar scrapers: iniciar, programar, ver resultados, descargar PDF. Solo superuser.",
+      "componentes": ["models", "views", "forms", "admin", "urls"],
+      "flujo": "Usuario -> Dashboard -> Seleccionar config -> Iniciar/Programar -> RQ Worker ejecuta -> Resultados en BD -> Visualizar/Descargar",
+      "dependencias_externas": ["django", "django-rq"]
+    },
+    {
+      "id": "tasks_rq",
+      "nombre": "Cola de Tareas RQ",
+      "responsabilidad": "Ejecucion asincrona y programada de scrapers con limites de recursos.",
+      "componentes": ["scraper_tasks"],
+      "flujo": "Django encola tarea -> Redis broker -> Worker RQ -> ResourceManager.set_limits() -> ScrapingCore -> Validacion -> Almacenamiento BD",
+      "dependencias_externas": ["rq", "django-rq", "redis"]
+    },
+    {
+      "id": "seguridad",
+      "nombre": "Modulo de Seguridad",
+      "responsabilidad": "Encriptacion de credenciales, validacion de passwords, headers de seguridad HTTP, deteccion de claves privadas en git.",
+      "componentes": ["SecurityManager", "AUTH_PASSWORD_VALIDATORS", "SecurityMiddleware", "pre-commit detect-private-key"],
+      "amenazas_mitigadas": [
+        "Fuerza bruta: password min 12 chars con complejidad",
+        "XSS: SECURE_BROWSER_XSS_FILTER",
+        "Clickjacking: X_FRAME_OPTIONS DENY",
+        "CSRF: CSRF_COOKIE_SECURE",
+        "Session hijacking: SESSION_COOKIE_SECURE",
+        "Man-in-the-middle: HSTS con preload",
+        "Content sniffing: SECURE_CONTENT_TYPE_NOSNIFF",
+        "Fuga de credenciales: Fernet encryption + .gitignore + detect-private-key hook",
+        "Exposicion de datos sensibles: .env nunca en git"
+      ]
+    },
+    {
+      "id": "gestor_recursos",
+      "nombre": "Gestor de Recursos",
+      "responsabilidad": "Limitar uso de RAM y cores de CPU para proteger el sistema con hardware limitado.",
+      "componentes": ["ResourceManager"],
+      "mecanismos": ["RLIMIT_AS para memoria virtual", "sched_setaffinity para afinidad de CPU"],
+      "configuracion": "MAX_RAM_MB y MAX_CPU_CORES en .env"
+    },
+    {
+      "id": "validacion_datos",
+      "nombre": "Validador de Datos",
+      "responsabilidad": "Validar y sanitizar datos extraidos antes de almacenarlos en BD.",
+      "componentes": ["ScrapedDataValidator"],
+      "metodos": ["validate_basic_data", "validate_with_schema (Pydantic)", "sanitize_data"]
+    },
+    {
+      "id": "anti_bot",
+      "nombre": "Sistema Anti-Bot",
+      "responsabilidad": "Evadir deteccion de bots en sitios protegidos.",
+      "componentes": ["AntiBotSystem", "ProxyRotator"],
+      "tecnicas": ["Rotacion de User-Agent", "Headers realistas", "Delay aleatorio entre requests", "Rotacion de proxies con failover"],
+      "configuracion": "Se define por sitio en configs/*.json (use_proxy, rotate_user_agent, delay_between_requests)"
+    }
+  ],
+
+  "flujos_de_trabajo": {
+    "scraping_manual": [
+      "1. Usuario accede al dashboard Django (superuser)",
+      "2. Selecciona archivo de configuracion del sitio (configs/*.json)",
+      "3. Hace clic en 'Iniciar'",
+      "4. Django encola tarea en RQ con Redis",
+      "5. Worker RQ toma la tarea",
+      "6. ResourceManager aplica limites de CPU/RAM",
+      "7. WebScraper carga config JSON",
+      "8. Si requiere auth: authenticate() con credenciales desencriptadas del .env",
+      "9. AntiBotSystem aplica headers + delay + proxy",
+      "10. Extraccion con Selenium/Playwright",
+      "11. ScrapedDataValidator valida y sanitiza datos",
+      "12. Datos se almacenan en PostgreSQL",
+      "13. Usuario ve resultados en dashboard",
+      "14. Opcional: descargar PDF"
+    ],
+    "scraping_programado": [
+      "1. Usuario programa scraper con frecuencia desde dashboard",
+      "2. Django registra schedule en BD",
+      "3. Scheduler (pendiente definir: cron o django-rq-scheduler) encola tareas periodicamente",
+      "4. Mismo flujo desde paso 5 del scraping manual"
+    ],
+    "agregar_nuevo_sitio": [
+      "1. Crear nuevo archivo JSON en backend/scraping_core/configs/",
+      "2. Definir: name, type, url, authentication, selectors, pagination, anti_bot, resource_limits",
+      "3. Si requiere auth: agregar credenciales en .env y referenciar en credentials_env",
+      "4. El sistema detecta automaticamente el nuevo archivo de configuracion",
+      "5. Usuario selecciona el nuevo sitio desde el dashboard"
+    ]
+  },
+
+  "base_datos": {
+    "motor": "PostgreSQL 15 (configurable via .env)",
+    "modelos_pendientes": [
+      {
+        "nombre": "ScraperConfig",
+        "campos_estimados": ["nombre", "archivo_config", "tipo (web/api)", "activo", "credenciales_env", "creado_en", "actualizado_en"]
+      },
+      {
+        "nombre": "ScraperExecution",
+        "campos_estimados": ["scraper_config (FK)", "estado (pendiente/ejecutando/completado/fallido)", "iniciado_en", "finalizado_en", "registros_extraidos", "error_log", "rq_job_id"]
+      },
+      {
+        "nombre": "ScrapedData",
+        "campos_estimados": ["scraper_execution (FK)", "url_origen", "datos (JSONField)", "validado", "creado_en"]
+      },
+      {
+        "nombre": "TaskSchedule",
+        "campos_estimados": ["scraper_config (FK)", "cron_expression", "activo", "ultima_ejecucion", "proxima_ejecucion"]
+      }
+    ],
+    "nota": "Modelos aun no implementados. Se definiran en el siguiente paso."
+  },
+
+  "servicios_contenedor": [
+    {
+      "nombre": "db",
+      "imagen": "postgres:15",
+      "puerto": "5432",
+      "volumen": "postgres_data"
+    },
+    {
+      "nombre": "redis",
+      "imagen": "redis:7-alpine",
+      "puerto": "6379",
+      "volumen": "redis_data"
+    },
+    {
+      "nombre": "web",
+      "build": "Dockerfile",
+      "comando": "python backend/manage.py runserver 0.0.0.0:8000",
+      "puerto": "8000",
+      "depende_de": ["db", "redis"]
+    },
+    {
+      "nombre": "worker",
+      "build": "Dockerfile",
+      "comando": "python backend/manage.py rqworker default",
+      "depende_de": ["db", "redis"]
+    }
+  ],
+
+  "restricciones_y_reglas": [
+    "No inferir nada: siempre preguntar antes de asumir",
+    "No entregar codigo hasta que el flujo y requerimientos esten completamente abordados",
+    "Todo debe ser modular para escalamiento",
+    "DRY (Don't Repeat Yourself) y CLEAN CODE",
+    "Seguridad primero: proteccion contra fuerza bruta, encriptacion de datos sensibles",
+    "Optimizacion de recursos: el sistema debe ser lo mas ligero posible",
+    "Credenciales siempre en .env, nunca hardcodeadas",
+    "Ruff debe pasar antes de subir cambios a GitHub (pre-commit)",
+    "Los datos extraidos deben pasar validacion antes de almacenarse",
+    "Configuracion por archivo JSON para cada sitio (no modificar codigo para agregar sitios)",
+    "Rotacion de proxies e IPs obligatoria como opcion configurable",
+    "Limites de RAM y CPU configurables por ejecucion",
+    "Solo superuser accede al sistema por ahora",
+    "Scraping manual y programado (no en tiempo real por limitaciones de hardware)"
+  ],
+
+  "estado_componentes": {
+    "estructura_carpetas": "creada",
+    "env_virtual": "creado",
+    "dependencias_instaladas": "creado",
+    "proyecto_django": "creado",
+    "settings_py": "creado",
+    "base_scraper": "creado (esqueleto)",
+    "web_scraper": "creado (esqueleto con TODOs)",
+    "api_scraper": "creado (esqueleto con TODOs)",
+    "anti_bot": "creado",
+    "proxy_rotator": "creado",
+    "security_manager": "creado",
+    "resource_manager": "creado",
+    "data_validators": "creado",
+    "config_ejemplo": "creado (example_site.json)",
+    "pre_commit": "creado",
+    "dockerfile": "creado",
+    "docker_compose": "creado",
+    "gitignore": "creado",
+    "git_repo": "inicializado",
+    "modelos_django": "pendiente",
+    "vistas_django": "pendiente",
+    "formularios_django": "pendiente",
+    "urls_django": "pendiente",
+    "templates": "pendiente",
+    "tareas_rq": "pendiente",
+    "migraciones_bd": "pendiente",
+    "superuser": "pendiente de crear",
+    "primer_scraper_funcional": "pendiente",
+    "scheduler_programado": "pendiente",
+    "descarga_pdf": "pendiente"
+  },
+
+  "proximos_pasos": [
+    "1. Definir modelos Django (ScraperConfig, ScraperExecution, ScrapedData, TaskSchedule)",
+    "2. Crear migraciones y aplicarlas",
+    "3. Implementar vistas y URLs del dashboard",
+    "4. Crear templates del dashboard",
+    "5. Implementar tareas RQ con ResourceManager",
+    "6. Desarrollar primer scraper funcional con config real",
+    "7. Implementar sistema de descarga de PDF",
+    "8. Configurar scheduler para scraping programado",
+    "9. Testing con pytest",
+    "10. Validar con Podman"
+  ]
+}
