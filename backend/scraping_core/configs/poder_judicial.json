@@ -1,0 +1,55 @@
+{
+    "name": "poder_judicial_consulta_unificada",
+    "type": "web",
+    "url": "https://oficinajudicialvirtual.pjud.cl",
+    "authentication": {
+        "required": false,
+        "method": "guest",
+        "alternative_method": "clave_unica",
+        "credentials_env": "PJUD_CREDENTIALS",
+        "note": "Modo invitado por defecto. Clave Única requiere RUT y PASS"
+    },
+    "selectors": {
+        "search_page": "select#competencia",
+        "results_table": "tbody#verDetalle",
+        "modal": "#modalDetalleCivil",
+        "cause_data_table": "div.modal-body > div.with-nav-tabs > div.panel-default > table:nth-child(1)",
+        "litigants_tab": "a[href='#litigantesCiv']",
+        "movements_tab": "a[href='#loadHistCuadernoCiv']"
+    },
+    "anti_bot": {
+        "use_proxy": true,
+        "rotate_user_agent": true,
+        "delay_between_requests": 2,
+        "human_behavior": true,
+        "priming_required": true,
+        "priming_sequence": "Clic en Clave Única -> Volver a home -> Inyectar tokens",
+        "recaptcha_tokens": [
+            "g-recaptcha-response-rit",
+            "g-recaptcha-response-nombre",
+            "g-recaptcha-response-fecha",
+            "g-recaptcha-response-jur"
+        ]
+    },
+    "resource_limits": {
+        "max_memory_mb": 512,
+        "timeout_seconds": 60,
+        "keep_alive_interval": 300
+    },
+    "search_params": {
+        "required": ["rol", "tribune", "competencia", "corteId"],
+        "example": {
+            "rol": "C-21503-2024",
+            "tribune": "273",
+            "competencia": "3",
+            "corteId": "90"
+        }
+    },
+    "data_extraction": {
+        "cause_fields": [
+            "rol", "admission", "cover", "estAdmin", 
+            "process", "location", "processState", "stage", "court"
+        ],
+        "related_data": ["movementsHistory", "litigants", "documentLinks"]
+    }
+}
